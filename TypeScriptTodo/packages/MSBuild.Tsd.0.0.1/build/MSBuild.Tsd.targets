@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Target Name="EnsureTsd">
+        <PropertyGroup>
+            <TsdNotFoundError>Tsd module not found. Please install Tsd in the node module path '$(NodeModulePath)'.</TsdNotFoundError>
+            <TsdExecutable>$(NodeModulePath)\Tsd.cmd</TsdExecutable>
+            <TsdOut>$([System.IO.Path]::GetTempFileName())</TsdOut>
+            <TsdExitCode>0</TsdExitCode>            
+        </PropertyGroup>
+        <Message Text="Ensuring Tsd is installed" Importance="low" />
+
+        <Exec Command="$(WINDIR)\system32\where.exe tsd"
+            ContinueOnError="true"
+            IgnoreExitCode="true"
+            ConsoleToMsBuild="true"
+            Condition=" !Exists('$(TsdExecutable)') ">
+            <Output TaskParameter="ExitCode" PropertyName="TsdExitCode"/>
+            <Output TaskParameter="ConsoleOutput" PropertyName="TsdExecutable" />
+        </Exec>
+        <Error Condition=" '$(TsdExitCode)' != '0' " Text="'$(TsdNotFoundError)'" />
+
+        <Warning Condition=" '$(TsdCommand)' == '' " Text="'Tsd command is not defined.'" />
+
+        <PropertyGroup>
+            <RunTsdBuildCmd>$(EnsureNodeInPathCmd) "$(TsdExecutable)" $(TsdCommand)</RunTsdBuildCmd>
+
+            <TsdBuildTaskError>Error running "$(TsdExecutable)" $(TsdCommand).</TsdBuildTaskError>
+        </PropertyGroup>
+
+        <Message Text="Tsd found: '$(TsdExecutable)'" />
+    </Target>
+
+    <Target Name="RunTsdBuild"
+			DependsOnTargets="EnsureNodeModules;EnsureTsd"
+			BeforeTargets="CompileTypeScript"
+			Condition=" Exists('$(TsdFile)') " >
+        <Message Text="Running tsd $(TsdCommand)" />
+        <Exec Command="$(RunTsdBuildCmd)"
+            ContinueOnError="true"
+            IgnoreExitCode="true"
+            WorkingDirectory="$(TsdWorkingDirectory)" >
+            <Output TaskParameter="ExitCode" PropertyName="TsdExitCode"/>
+        </Exec>
+        <ReadLinesFromFile File="$(TsdOut)">
+            <Output TaskParameter="Lines" ItemName="TsdOutLines"/>
+        </ReadLinesFromFile>
+        <Delete Files="$(TsdOut)"/>
+        <Warning Condition=" '$(TsdExitCode)' != '0' " Text="%(TsdOutLines.Identity)" />
+        <Error Condition=" '$(TsdExitCode)' != '0' " Text="$(TsdBuildTaskError)" />
+    </Target>
+</Project>
