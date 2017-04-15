@@ -7,7 +7,7 @@
 *.sln.docstates
 
 # Dessa är test regler, ta bort eller kommentera bort så fort du ser de.
-testfil.txt
+
 
 # Build results
 
